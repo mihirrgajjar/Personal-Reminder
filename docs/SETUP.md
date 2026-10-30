@@ -74,6 +74,13 @@ Open your browser to: `http://localhost:8080`
 3. Paste its contents and click **"Run"**.
 4. This creates the PostgreSQL function `public.calculate_next_occurrence(...)` which computes next scheduled occurrences in SQL, preserving wall-clock time in the reminder's timezone and clamping shorter months.
 
+#### Migration 4: Scheduler & Concurrency-Safe Job Queue (Phase 5)
+1. In the **SQL Editor**, click **"+ New Query"**.
+2. Open [supabase/migrations/20261030000004_create_scheduler_and_job_queue.sql](file:///d:/Projects/Personal_reminder/supabase/migrations/20261030000004_create_scheduler_and_job_queue.sql).
+3. Paste its contents and click **"Run"**.
+4. This creates `public.claim_due_reminders()` (`FOR UPDATE SKIP LOCKED`) and `public.complete_reminder_occurrence()`.
+5. For full scheduler setup and `pg_cron` instructions, see [docs/SCHEDULER.md](file:///d:/Projects/Personal_reminder/docs/SCHEDULER.md).
+
 ### Step 2.4: Create the Owner Account (Secure Single-User Procedure)
 Since this is a strictly private single-user application, public sign-ups must remain disabled.
 
