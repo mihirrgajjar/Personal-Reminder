@@ -229,12 +229,31 @@
         </div>
 
         <div class="settings-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <h2 class="settings-section-title" style="margin: 0;">Email Delivery History</h2>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-logs">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+              <span>Refresh Logs</span>
+            </button>
+          </div>
+          <p class="settings-section-desc">Recent reminder email dispatches and provider statuses.</p>
+
+          <div id="logs-container" style="display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem;">
+            <!-- Populated by JS -->
+            <div style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">No delivery logs found.</div>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h2 class="settings-section-title">Backend & Delivery Information</h2>
           <p class="settings-section-desc">Current system configuration overview.</p>
           <div style="font-size: 0.85rem; line-height: 1.8; color: var(--text-muted);">
             <div><strong>Architecture:</strong> Netlify (Frontend) &bull; Supabase (Auth, Postgres, pg_cron) &bull; Resend (SMTP API)</div>
             <div><strong>Scheduler Frequency:</strong> ~1 run per minute via pg_cron</div>
-            <div><strong>Duplicate Protection:</strong> DB row claiming & idempotency key per scheduled run</div>
+            <div><strong>Duplicate Protection:</strong> DB row claiming (`FOR UPDATE SKIP LOCKED`) & idempotency key per scheduled run</div>
           </div>
         </div>
       </div>

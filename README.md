@@ -68,6 +68,6 @@ Navigate to: `http://localhost:8080`
 - [x] **Phase 3**: Reminder database schema, RLS policies, and live CRUD.
 - [x] **Phase 4**: Server-side recurrence engine.
 - [x] **Phase 5**: Server-side scheduler & concurrency-safe job processing.
-- [ ] **Phase 6**: Resend email delivery integration.
+- [x] **Phase 6**: Resend email delivery integration.
 - [ ] **Phase 7**: Comprehensive security audit & reliability testing.
 - [ ] **Phase 8**: Netlify production deployment & handover.

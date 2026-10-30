@@ -756,6 +756,76 @@
     });
   }
 
+  // --- Delivery History Logs ---
+  const logsContainer = document.getElementById('logs-container');
+  const btnRefreshLogs = document.getElementById('btn-refresh-logs');
+
+  async function loadDeliveryLogs() {
+    if (!logsContainer) return;
+
+    if (isLiveAuth) {
+      const sb = window.SupabaseModule.getClient();
+      if (sb) {
+        logsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem;"><span class="spinner" style="display:inline-block; width:14px; height:14px; border-width:2px; vertical-align:middle; margin-right:6px;"></span> Loading logs...</div>';
+        try {
+          const { data, error } = await sb
+            .from('reminder_logs')
+            .select('*, reminders(title)')
+            .order('attempted_at', { ascending: false })
+            .limit(20);
+
+          if (error) throw error;
+
+          if (!data || data.length === 0) {
+            logsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">No delivery logs recorded yet.</div>';
+            return;
+          }
+
+          logsContainer.innerHTML = '';
+          data.forEach(log => {
+            const card = document.createElement('div');
+            card.style.cssText = 'background: var(--bg-surface-elevated); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); font-size: 0.825rem; display: flex; flex-direction: column; gap: 0.25rem; border: 1px solid var(--border-subtle);';
+            
+            const badgeClass = log.email_status === 'sent' ? 'badge-completed' : (log.email_status === 'failed' ? 'badge-overdue' : 'badge-today');
+            const title = log.reminders ? log.reminders.title : 'Reminder';
+            const timeStr = formatScheduleTime(log.attempted_at);
+
+            card.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong style="color: var(--text-main); font-size: 0.875rem;">${escapeHtml(title)}</strong>
+                <span class="badge ${badgeClass}">${log.email_status}</span>
+              </div>
+              <div style="color: var(--text-muted); font-size: 0.775rem;">
+                Attempted: ${timeStr} &bull; Scheduled for: ${formatScheduleTime(log.scheduled_for)}
+              </div>
+              ${log.provider_message_id ? `<div class="font-mono" style="color: var(--text-muted); font-size: 0.75rem;">Provider ID: ${escapeHtml(log.provider_message_id)}</div>` : ''}
+              ${log.error_message ? `<div style="color: var(--danger); font-size: 0.75rem;">Error: ${escapeHtml(log.error_message)}</div>` : ''}
+            `;
+            logsContainer.appendChild(card);
+          });
+        } catch (err) {
+          logsContainer.innerHTML = `<div style="color: var(--danger); font-size: 0.85rem;">Failed to load delivery logs: ${escapeHtml(err.message)}</div>`;
+        }
+      }
+    } else {
+      logsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem; font-style: italic;">Delivery logs will display here when connected to your live Supabase project.</div>';
+    }
+  }
+
+  if (btnRefreshLogs) {
+    btnRefreshLogs.addEventListener('click', () => {
+      loadDeliveryLogs();
+      showToast('Delivery logs refreshed.');
+    });
+  }
+
+  // Reload logs when switching to settings tab
+  if (tabBtnSettings) {
+    tabBtnSettings.addEventListener('click', () => {
+      loadDeliveryLogs();
+    });
+  }
+
   // Initial Boot: fetch profile and load reminders from database
   if (loadingState) loadingState.classList.remove('hidden');
   try {
