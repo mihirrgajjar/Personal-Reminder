@@ -324,6 +324,12 @@
             <input type="number" id="form-month-day" class="form-input" min="1" max="31" value="1">
             <span class="form-hint">Note: If a month has fewer days (e.g. Feb 30), the last valid day of that month will be used.</span>
           </div>
+
+          <!-- Next Occurrence Preview -->
+          <div id="recurrence-preview-box" class="form-group hidden" style="background: var(--bg-surface-elevated); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border-left: 3px solid var(--primary); font-size: 0.8rem;">
+            <div style="font-weight: 600; color: var(--text-main);">Scheduled Recurrence Preview:</div>
+            <div id="recurrence-preview-text" style="color: var(--text-muted); margin-top: 0.25rem;"></div>
+          </div>
         </div>
 
         <div class="modal-footer">
@@ -380,6 +386,7 @@
   <script src="assets/js/config.example.js"></script>
   <script src="assets/js/config.js" onerror="/* config.js is optional until user supplies live credentials */"></script>
   <script src="assets/js/supabase-client.js"></script>
+  <script src="assets/js/recurrence.js"></script>
   <script src="assets/js/reminders.js"></script>
   <script src="assets/js/dashboard.js"></script>
 </body>

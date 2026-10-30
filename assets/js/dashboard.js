@@ -184,7 +184,10 @@
   if (tabBtnReminders) tabBtnReminders.addEventListener('click', () => switchView('reminders'));
   if (tabBtnSettings) tabBtnSettings.addEventListener('click', () => switchView('settings'));
 
-  // --- Recurrence Form Toggle ---
+  const recurrencePreviewBox = document.getElementById('recurrence-preview-box');
+  const recurrencePreviewText = document.getElementById('recurrence-preview-text');
+
+  // --- Recurrence Form Toggle & Preview ---
   function updateRecurrenceInputs() {
     const val = formRecurrence.value;
     if (val === 'weekly') {
@@ -197,9 +200,61 @@
       weeklyDaysGroup.classList.add('hidden');
       monthlyDayGroup.classList.add('hidden');
     }
+    updateRecurrencePreview();
+  }
+
+  function updateRecurrencePreview() {
+    if (!recurrencePreviewBox || !recurrencePreviewText) return;
+    const recType = formRecurrence.value;
+    if (recType === 'none' || !window.RecurrenceEngine) {
+      recurrencePreviewBox.classList.add('hidden');
+      return;
+    }
+
+    const dateVal = formDate.value;
+    const timeVal = formTime.value;
+    if (!dateVal || !timeVal) {
+      recurrencePreviewBox.classList.add('hidden');
+      return;
+    }
+
+    const [year, month, day] = dateVal.split('-').map(Number);
+    const [hours, minutes] = timeVal.split(':').map(Number);
+    const scheduledDate = new Date(year, month - 1, day, hours, minutes);
+
+    let selectedWeekdays = [];
+    if (recType === 'weekly') {
+      weekdayButtons.forEach(b => {
+        if (b.classList.contains('selected')) {
+          selectedWeekdays.push(parseInt(b.dataset.day, 10));
+        }
+      });
+    }
+
+    try {
+      const nextDate = window.RecurrenceEngine.calculateNextOccurrence({
+        scheduledAt: scheduledDate.toISOString(),
+        timezone: activeTimezone,
+        recurrenceType: recType,
+        recurrenceDays: selectedWeekdays,
+        recurrenceMonthDay: parseInt(formMonthDay.value, 10) || 1
+      });
+
+      if (nextDate) {
+        recurrencePreviewText.textContent = `Following run after initial schedule: ${formatScheduleTime(nextDate.toISOString())} (${activeTimezone})`;
+        recurrencePreviewBox.classList.remove('hidden');
+      } else {
+        recurrencePreviewBox.classList.add('hidden');
+      }
+    } catch (e) {
+      recurrencePreviewBox.classList.add('hidden');
+    }
   }
 
   formRecurrence.addEventListener('change', updateRecurrenceInputs);
+  formDate.addEventListener('change', updateRecurrencePreview);
+  formTime.addEventListener('change', updateRecurrencePreview);
+  formMonthDay.addEventListener('input', updateRecurrencePreview);
 
   // Weekday selection toggles
   weekdayButtons.forEach(btn => {
@@ -208,6 +263,7 @@
       if (document.querySelectorAll('.weekday-btn.selected').length > 0) {
         weekdayError.classList.add('hidden');
       }
+      updateRecurrencePreview();
     });
   });
 
@@ -501,6 +557,22 @@
         ? `<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: var(--text-muted); font-size: 0.65rem;" title="Demo Data">Demo</span>`
         : '';
 
+      let nextRunText = '';
+      if (!isCompleted && item.recurrence_type && item.recurrence_type !== 'none' && window.RecurrenceEngine) {
+        try {
+          const nextDate = window.RecurrenceEngine.calculateNextOccurrence({
+            scheduledAt: item.scheduled_at,
+            timezone: item.timezone || activeTimezone,
+            recurrenceType: item.recurrence_type,
+            recurrenceDays: item.recurrence_days,
+            recurrenceMonthDay: item.recurrence_month_day
+          });
+          if (nextDate) {
+            nextRunText = `Next: ${formatScheduleTime(nextDate.toISOString())}`;
+          }
+        } catch (e) {}
+      }
+
       card.innerHTML = `
         <div class="reminder-left">
           <button type="button" class="reminder-check-btn" title="${isCompleted ? 'Mark Active' : 'Mark Completed'}" aria-label="Toggle completion">
@@ -525,6 +597,7 @@
                 <span>${formatScheduleTime(item.scheduled_at)}</span>
               </span>
               ${recurrenceLabel ? `<span class="meta-item font-mono" style="font-size: 0.75rem;">(${recurrenceLabel})</span>` : ''}
+              ${nextRunText ? `<span class="meta-item" style="color: var(--primary); font-size: 0.75rem;">${nextRunText}</span>` : ''}
             </div>
           </div>
         </div>

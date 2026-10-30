@@ -68,6 +68,12 @@ Open your browser to: `http://localhost:8080`
    - Performance indexes on `(status, next_run_at)`, `user_id`, and `scheduled_at`.
    - Strict Row Level Security (RLS) policies ensuring all reads, inserts, updates, and deletes are restricted to the owner (`auth.uid() = user_id`).
 
+#### Migration 3: Recurrence Calculation Engine (Phase 4)
+1. In the **SQL Editor**, click **"+ New Query"**.
+2. Open [supabase/migrations/20261030000003_create_recurrence_engine.sql](file:///d:/Projects/Personal_reminder/supabase/migrations/20261030000003_create_recurrence_engine.sql).
+3. Paste its contents and click **"Run"**.
+4. This creates the PostgreSQL function `public.calculate_next_occurrence(...)` which computes next scheduled occurrences in SQL, preserving wall-clock time in the reminder's timezone and clamping shorter months.
+
 ### Step 2.4: Create the Owner Account (Secure Single-User Procedure)
 Since this is a strictly private single-user application, public sign-ups must remain disabled.
 
@@ -108,3 +114,31 @@ With your owner account signed in:
 4. **Snooze**: Click **Snooze** to postpone by +1 hour, +3 hours, or until tomorrow morning.
 5. **Delete**: Click the trash icon to delete a reminder.
 6. **Data Persistence**: Sign out and log back in, or refresh the page; all reminders remain safely preserved in your Supabase database.
+
+---
+
+## 5. Recurrence Engine & Automated Tests (Phase 4)
+
+### Recurrence Rules & Behavior
+- **One-time (`none`)**: Not recurring; returns null.
+- **Daily (`daily`)**: Advances by 1 calendar day, preserving exact wall-clock hour and minute in the owner's timezone.
+- **Weekly (`weekly`)**: Repeats on selected weekdays.
+  - **Weekday Numbering**: `0 = Sunday`, `1 = Monday`, `2 = Tuesday`, `3 = Wednesday`, `4 = Thursday`, `5 = Friday`, `6 = Saturday`.
+- **Monthly (`monthly`)**: Repeats on the chosen calendar day (1–31).
+  - **Short Month Clamping**: If a target day does not exist in the upcoming month (e.g. Day 31 in February or April), the engine clamps to the last valid day of that month (Feb 28 in non-leap years, Feb 29 in leap years, Apr 30, etc.).
+- **Advance Guarantee**: Advances from the intended scheduled occurrence, not the time of trigger/invocation.
+
+### Running Automated Unit Tests
+To run the automated recurrence test suite:
+```bash
+node tests/recurrence.test.js
+```
+The test suite validates:
+- One-time rejection
+- Daily preservation across days
+- Weekly schedule advancement and weekend rollover
+- Monthly day clamping (Jan 31 -> Feb 28/29)
+- Leap year edge cases (2028 leap year)
+- Year boundary rollovers (Dec 31 -> Jan 31)
+- Daylight saving transitions in US timezones
+- Historical occurrence catch-up without infinite loops
