@@ -167,6 +167,9 @@ window.ReminderStore = (function () {
           recurrence_type: reminderData.recurrence_type || 'none',
           recurrence_days: reminderData.recurrence_days,
           recurrence_month_day: reminderData.recurrence_month_day,
+          recurrence_interval_hours: reminderData.recurrence_interval_hours,
+          recurrence_end_at: reminderData.recurrence_end_at,
+          max_occurrences: reminderData.max_occurrences,
           next_run_at: reminderData.scheduled_at,
           updated_at: new Date().toISOString()
         };
@@ -192,6 +195,10 @@ window.ReminderStore = (function () {
           recurrence_type: reminderData.recurrence_type || 'none',
           recurrence_days: reminderData.recurrence_days,
           recurrence_month_day: reminderData.recurrence_month_day,
+          recurrence_interval_hours: reminderData.recurrence_interval_hours,
+          recurrence_end_at: reminderData.recurrence_end_at,
+          max_occurrences: reminderData.max_occurrences,
+          occurrences_count: 0,
           next_run_at: reminderData.scheduled_at,
           status: 'active'
         };

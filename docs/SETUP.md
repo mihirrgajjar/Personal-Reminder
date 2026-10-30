@@ -81,6 +81,16 @@ Open your browser to: `http://localhost:8080`
 4. This creates `public.claim_due_reminders()` (`FOR UPDATE SKIP LOCKED`) and `public.complete_reminder_occurrence()`.
 5. For full scheduler setup and `pg_cron` instructions, see [docs/SCHEDULER.md](file:///d:/Projects/Personal_reminder/docs/SCHEDULER.md).
 
+#### Migration 5: Hourly Recurrence & End Conditions
+1. In the **SQL Editor**, click **"+ New Query"**.
+2. Open [supabase/migrations/20261030000005_add_hourly_recurrence.sql](file:///d:/Projects/Personal_reminder/supabase/migrations/20261030000005_add_hourly_recurrence.sql).
+3. Paste its contents and click **"Run"**.
+4. This adds:
+   - Support for `'hourly'` in recurrence type check constraint.
+   - Columns: `recurrence_interval_hours` (1, 2, 3, 4, or custom integer), `recurrence_end_at` (optional termination timestamp), `max_occurrences` (optional repetition ceiling), and `occurrences_count`.
+   - Updated `calculate_next_occurrence` to calculate drift-free hourly multiples from the original schedule (`scheduled_at + k * interval`).
+   - Termination handling: automatically sets `status = 'completed'` when `max_occurrences` or `recurrence_end_at` is reached.
+
 ### Step 2.4: Create the Owner Account (Secure Single-User Procedure)
 Since this is a strictly private single-user application, public sign-ups must remain disabled.
 

@@ -180,6 +180,104 @@ runTest('Advances from intended scheduled occurrence, not current time', () => {
   assert.strictEqual(parts.hour, 10);
 });
 
+// 11. Hourly recurrence - Every 1 hour
+runTest('Hourly recurrence advances by exactly 1 hour (drift-free)', () => {
+  const base = '2026-11-01T10:00:00.000Z';
+  const next = RecurrenceEngine.calculateNextOccurrence({
+    scheduledAt: base,
+    timezone: 'Asia/Kolkata',
+    recurrenceType: 'hourly',
+    recurrenceIntervalHours: 1
+  });
+  assert.ok(next !== null);
+  assert.strictEqual(next.toISOString(), '2026-11-01T11:00:00.000Z');
+});
+
+// 12. Hourly recurrence - Custom interval (3 hours)
+runTest('Hourly recurrence with custom interval (3 hours) advances by 3 hours', () => {
+  const base = '2026-11-01T04:15:30.000Z';
+  const next = RecurrenceEngine.calculateNextOccurrence({
+    scheduledAt: base,
+    timezone: 'Asia/Kolkata',
+    recurrenceType: 'hourly',
+    recurrenceIntervalHours: 3
+  });
+  assert.ok(next !== null);
+  assert.strictEqual(next.toISOString(), '2026-11-01T07:15:30.000Z');
+  // Exact minutes and seconds are preserved without drift
+  assert.strictEqual(next.getUTCMinutes(), 15);
+  assert.strictEqual(next.getUTCSeconds(), 30);
+});
+
+// 13. Sequential hourly recurrence preserves timing drift over 10 steps
+runTest('Hourly recurrence prevents timing drift across 10 steps', () => {
+  const base = '2026-11-01T12:00:00.000Z';
+  let current = base;
+  for (let i = 1; i <= 10; i++) {
+    const next = RecurrenceEngine.calculateNextOccurrence({
+      scheduledAt: current,
+      timezone: 'UTC',
+      recurrenceType: 'hourly',
+      recurrenceIntervalHours: 2
+    });
+    assert.strictEqual(next.getTime(), new Date(base).getTime() + (i * 2 * 3600 * 1000));
+    current = next.toISOString();
+  }
+});
+
+// 14. Maximum occurrences termination
+runTest('Recurrence terminates (returns null) when maxOccurrences is reached', () => {
+  const base = '2026-11-01T10:00:00.000Z';
+  // Before limit
+  const active = RecurrenceEngine.calculateNextOccurrence({
+    scheduledAt: base,
+    timezone: 'Asia/Kolkata',
+    recurrenceType: 'hourly',
+    recurrenceIntervalHours: 1,
+    maxOccurrences: 5,
+    occurrencesCount: 4
+  });
+  assert.ok(active !== null);
+
+  // At limit
+  const terminated = RecurrenceEngine.calculateNextOccurrence({
+    scheduledAt: base,
+    timezone: 'Asia/Kolkata',
+    recurrenceType: 'hourly',
+    recurrenceIntervalHours: 1,
+    maxOccurrences: 5,
+    occurrencesCount: 5
+  });
+  assert.strictEqual(terminated, null);
+});
+
+// 15. End datetime termination
+runTest('Recurrence terminates (returns null) when next occurrence exceeds recurrenceEndAt', () => {
+  const base = '2026-11-01T10:00:00.000Z';
+  const next = RecurrenceEngine.calculateNextOccurrence({
+    scheduledAt: base,
+    timezone: 'Asia/Kolkata',
+    recurrenceType: 'hourly',
+    recurrenceIntervalHours: 4,
+    recurrenceEndAt: '2026-11-01T13:00:00.000Z' // 3 hours after base; next run would be +4 hours
+  });
+  assert.strictEqual(next, null);
+});
+
+// 16. Continuous recurrence when no end conditions provided
+runTest('Continues indefinitely when neither maxOccurrences nor recurrenceEndAt is set', () => {
+  const base = '2026-11-01T10:00:00.000Z';
+  const next = RecurrenceEngine.calculateNextOccurrence({
+    scheduledAt: base,
+    timezone: 'Asia/Kolkata',
+    recurrenceType: 'hourly',
+    recurrenceIntervalHours: 1,
+    occurrencesCount: 9999
+  });
+  assert.ok(next !== null);
+  assert.strictEqual(next.toISOString(), '2026-11-01T11:00:00.000Z');
+});
+
 console.log(`\n========================================`);
 console.log(`Summary: ${passedCount} passed, ${failedCount} failed`);
 console.log(`========================================`);

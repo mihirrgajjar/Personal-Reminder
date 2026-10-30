@@ -66,9 +66,15 @@
   const formDate = document.getElementById('form-date');
   const formTime = document.getElementById('form-time');
   const formRecurrence = document.getElementById('form-recurrence');
+  const hourlyIntervalGroup = document.getElementById('hourly-interval-group');
+  const formHourlyInterval = document.getElementById('form-hourly-interval');
+  const formHourlyCustom = document.getElementById('form-hourly-custom');
   const weeklyDaysGroup = document.getElementById('weekly-days-group');
   const monthlyDayGroup = document.getElementById('monthly-day-group');
   const formMonthDay = document.getElementById('form-month-day');
+  const recurrenceEndConditions = document.getElementById('recurrence-end-conditions');
+  const formEndAt = document.getElementById('form-end-at');
+  const formMaxOccurrences = document.getElementById('form-max-occurrences');
   const weekdayButtons = document.querySelectorAll('.weekday-btn');
 
   const titleError = document.getElementById('title-error');
@@ -188,8 +194,28 @@
   const recurrencePreviewText = document.getElementById('recurrence-preview-text');
 
   // --- Recurrence Form Toggle & Preview ---
+  function getEffectiveHourlyInterval() {
+    if (!formHourlyInterval) return 1;
+    if (formHourlyInterval.value === 'custom') {
+      const parsed = parseInt(formHourlyCustom.value, 10);
+      return (Number.isFinite(parsed) && parsed > 0) ? parsed : 1;
+    }
+    return parseInt(formHourlyInterval.value, 10) || 1;
+  }
+
   function updateRecurrenceInputs() {
     const val = formRecurrence.value;
+    if (hourlyIntervalGroup) {
+      if (val === 'hourly') {
+        hourlyIntervalGroup.classList.remove('hidden');
+        if (formHourlyCustom) {
+          formHourlyCustom.classList.toggle('hidden', formHourlyInterval.value !== 'custom');
+        }
+      } else {
+        hourlyIntervalGroup.classList.add('hidden');
+      }
+    }
+
     if (val === 'weekly') {
       weeklyDaysGroup.classList.remove('hidden');
       monthlyDayGroup.classList.add('hidden');
@@ -200,6 +226,15 @@
       weeklyDaysGroup.classList.add('hidden');
       monthlyDayGroup.classList.add('hidden');
     }
+
+    if (recurrenceEndConditions) {
+      if (val !== 'none') {
+        recurrenceEndConditions.classList.remove('hidden');
+      } else {
+        recurrenceEndConditions.classList.add('hidden');
+      }
+    }
+
     updateRecurrencePreview();
   }
 
@@ -231,20 +266,32 @@
       });
     }
 
+    const intervalHours = getEffectiveHourlyInterval();
+    const recurrenceEndAt = (formEndAt && formEndAt.value) ? new Date(formEndAt.value).toISOString() : null;
+    const maxOccurrences = (formMaxOccurrences && formMaxOccurrences.value) ? parseInt(formMaxOccurrences.value, 10) : null;
+
     try {
       const nextDate = window.RecurrenceEngine.calculateNextOccurrence({
         scheduledAt: scheduledDate.toISOString(),
         timezone: activeTimezone,
         recurrenceType: recType,
+        recurrenceIntervalHours: intervalHours,
+        recurrenceEndAt: recurrenceEndAt,
+        maxOccurrences: maxOccurrences,
+        occurrencesCount: 0,
         recurrenceDays: selectedWeekdays,
         recurrenceMonthDay: parseInt(formMonthDay.value, 10) || 1
       });
 
       if (nextDate) {
-        recurrencePreviewText.textContent = `Following run after initial schedule: ${formatScheduleTime(nextDate.toISOString())} (${activeTimezone})`;
+        let suffix = '';
+        if (maxOccurrences) suffix += ` • Stops after ${maxOccurrences} run${maxOccurrences > 1 ? 's' : ''}`;
+        if (recurrenceEndAt) suffix += ` • Ends by ${formatScheduleTime(recurrenceEndAt)}`;
+        recurrencePreviewText.textContent = `Following run after initial schedule: ${formatScheduleTime(nextDate.toISOString())} (${activeTimezone})${suffix}`;
         recurrencePreviewBox.classList.remove('hidden');
       } else {
-        recurrencePreviewBox.classList.add('hidden');
+        recurrencePreviewText.textContent = `Recurrence will not trigger (end condition reached or invalid schedule).`;
+        recurrencePreviewBox.classList.remove('hidden');
       }
     } catch (e) {
       recurrencePreviewBox.classList.add('hidden');
@@ -252,6 +299,23 @@
   }
 
   formRecurrence.addEventListener('change', updateRecurrenceInputs);
+  if (formHourlyInterval) {
+    formHourlyInterval.addEventListener('change', () => {
+      if (formHourlyCustom) {
+        formHourlyCustom.classList.toggle('hidden', formHourlyInterval.value !== 'custom');
+      }
+      updateRecurrencePreview();
+    });
+  }
+  if (formHourlyCustom) {
+    formHourlyCustom.addEventListener('input', updateRecurrencePreview);
+  }
+  if (formEndAt) {
+    formEndAt.addEventListener('change', updateRecurrencePreview);
+  }
+  if (formMaxOccurrences) {
+    formMaxOccurrences.addEventListener('input', updateRecurrencePreview);
+  }
   formDate.addEventListener('change', updateRecurrencePreview);
   formTime.addEventListener('change', updateRecurrencePreview);
   formMonthDay.addEventListener('input', updateRecurrencePreview);
@@ -283,6 +347,13 @@
     formTime.value = `${hours}:${minutes}`;
 
     formRecurrence.value = 'none';
+    if (formHourlyInterval) formHourlyInterval.value = '1';
+    if (formHourlyCustom) {
+      formHourlyCustom.value = '';
+      formHourlyCustom.classList.add('hidden');
+    }
+    if (formEndAt) formEndAt.value = '';
+    if (formMaxOccurrences) formMaxOccurrences.value = '';
     formMonthDay.value = '1';
     weekdayButtons.forEach(b => b.classList.remove('selected'));
     updateRecurrenceInputs();
@@ -309,6 +380,41 @@
     formTime.value = `${hours}:${minutes}`;
 
     formRecurrence.value = item.recurrence_type || 'none';
+    if (formHourlyInterval) {
+      const hInterval = item.recurrence_interval_hours || 1;
+      if ([1, 2, 3, 4].includes(hInterval)) {
+        formHourlyInterval.value = String(hInterval);
+        if (formHourlyCustom) {
+          formHourlyCustom.value = '';
+          formHourlyCustom.classList.add('hidden');
+        }
+      } else {
+        formHourlyInterval.value = 'custom';
+        if (formHourlyCustom) {
+          formHourlyCustom.value = hInterval;
+          formHourlyCustom.classList.remove('hidden');
+        }
+      }
+    }
+
+    if (formEndAt) {
+      if (item.recurrence_end_at) {
+        const endDt = new Date(item.recurrence_end_at);
+        const y = endDt.getFullYear();
+        const m = String(endDt.getMonth() + 1).padStart(2, '0');
+        const d = String(endDt.getDate()).padStart(2, '0');
+        const hr = String(endDt.getHours()).padStart(2, '0');
+        const mn = String(endDt.getMinutes()).padStart(2, '0');
+        formEndAt.value = `${y}-${m}-${d}T${hr}:${mn}`;
+      } else {
+        formEndAt.value = '';
+      }
+    }
+
+    if (formMaxOccurrences) {
+      formMaxOccurrences.value = item.max_occurrences || '';
+    }
+
     formMonthDay.value = item.recurrence_month_day || '1';
 
     weekdayButtons.forEach(btn => {
@@ -436,6 +542,10 @@
     const [hours, minutes] = timeVal.split(':').map(Number);
     const scheduledDate = new Date(year, month - 1, day, hours, minutes);
 
+    const hourlyHours = recurrence === 'hourly' ? getEffectiveHourlyInterval() : null;
+    const recurrenceEndAt = (recurrence !== 'none' && formEndAt && formEndAt.value) ? new Date(formEndAt.value).toISOString() : null;
+    const maxOccurrences = (recurrence !== 'none' && formMaxOccurrences && formMaxOccurrences.value) ? parseInt(formMaxOccurrences.value, 10) : null;
+
     const reminderPayload = {
       id: formId.value || undefined,
       title,
@@ -443,6 +553,9 @@
       scheduled_at: scheduledDate.toISOString(),
       timezone: activeTimezone,
       recurrence_type: recurrence,
+      recurrence_interval_hours: hourlyHours,
+      recurrence_end_at: recurrenceEndAt,
+      max_occurrences: maxOccurrences,
       recurrence_days: recurrence === 'weekly' ? selectedWeekdays : null,
       recurrence_month_day: recurrence === 'monthly' ? parseInt(formMonthDay.value, 10) : null
     };
@@ -479,16 +592,35 @@
 
   function getRecurrenceLabel(r) {
     if (!r.recurrence_type || r.recurrence_type === 'none') return null;
-    if (r.recurrence_type === 'daily') return 'Repeats Daily';
-    if (r.recurrence_type === 'weekly') {
+    let baseLabel = '';
+    if (r.recurrence_type === 'hourly') {
+      const h = r.recurrence_interval_hours || 1;
+      baseLabel = h === 1 ? 'Every 1 Hour' : `Every ${h} Hours`;
+    } else if (r.recurrence_type === 'daily') {
+      baseLabel = 'Repeats Daily';
+    } else if (r.recurrence_type === 'weekly') {
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const days = (r.recurrence_days || []).map(d => dayNames[d]).join(', ');
-      return `Weekly on ${days || 'selected days'}`;
+      baseLabel = `Weekly on ${days || 'selected days'}`;
+    } else if (r.recurrence_type === 'monthly') {
+      baseLabel = `Monthly on day ${r.recurrence_month_day || 1}`;
+    } else {
+      baseLabel = 'Recurring';
     }
-    if (r.recurrence_type === 'monthly') {
-      return `Monthly on day ${r.recurrence_month_day || 1}`;
+
+    const details = [];
+    if (r.max_occurrences) {
+      const count = r.occurrences_count || 0;
+      details.push(`${count}/${r.max_occurrences} runs`);
     }
-    return 'Recurring';
+    if (r.recurrence_end_at) {
+      details.push(`until ${formatScheduleTime(r.recurrence_end_at)}`);
+    }
+
+    if (details.length > 0) {
+      return `${baseLabel} (${details.join(', ')})`;
+    }
+    return baseLabel;
   }
 
   function renderSummaryCounts() {
@@ -547,9 +679,9 @@
       }
 
       const recurrenceBadge = recurrenceLabel 
-        ? `<span class="badge badge-recurring" title="${recurrenceLabel}">
+        ? `<span class="badge badge-recurring" title="${escapeHtml(recurrenceLabel)}">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-            ${item.recurrence_type}
+            ${item.recurrence_type === 'hourly' ? `${item.recurrence_interval_hours || 1}h` : item.recurrence_type}
            </span>` 
         : '';
 
@@ -564,6 +696,10 @@
             scheduledAt: item.scheduled_at,
             timezone: item.timezone || activeTimezone,
             recurrenceType: item.recurrence_type,
+            recurrenceIntervalHours: item.recurrence_interval_hours,
+            recurrenceEndAt: item.recurrence_end_at,
+            maxOccurrences: item.max_occurrences,
+            occurrencesCount: item.occurrences_count || 0,
             recurrenceDays: item.recurrence_days,
             recurrenceMonthDay: item.recurrence_month_day
           });

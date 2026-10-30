@@ -131,14 +131,39 @@ it('Daylight Saving Time: Preserves wall-clock hour in America/New_York across t
   assert.strictEqual(parts.minute, 30);
 });
 
+it('Hourly recurrence advances drift-free by custom hours and enforces termination constraints', () => {
+  const base = '2026-11-01T08:15:00.000Z';
+  const next = RecurrenceEngine.calculateNextOccurrence({
+    scheduledAt: base,
+    timezone: 'Asia/Kolkata',
+    recurrenceType: 'hourly',
+    recurrenceIntervalHours: 4,
+    maxOccurrences: 3,
+    occurrencesCount: 1
+  });
+  assert.ok(next !== null);
+  assert.strictEqual(next.toISOString(), '2026-11-01T12:15:00.000Z');
+
+  // Should terminate when maxOccurrences reached
+  const terminated = RecurrenceEngine.calculateNextOccurrence({
+    scheduledAt: base,
+    timezone: 'Asia/Kolkata',
+    recurrenceType: 'hourly',
+    recurrenceIntervalHours: 4,
+    maxOccurrences: 3,
+    occurrencesCount: 3
+  });
+  assert.strictEqual(terminated, null);
+});
+
 // GROUP 2: SQL Migration & Schema Constraints
 console.log('\n2. Database Schema & RLS Policy Integrity:');
 
 const migrationsDir = path.join(__dirname, '..', 'supabase', 'migrations');
 const migrationFiles = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql'));
 
-it('All 4 expected database migrations are present', () => {
-  assert.strictEqual(migrationFiles.length, 4);
+it('All 5 expected database migrations are present', () => {
+  assert.strictEqual(migrationFiles.length, 5);
 });
 
 it('Migration 1 creates profiles with RLS enabled and authenticated policies', () => {
@@ -166,6 +191,17 @@ it('Migration 4 implements concurrency-safe claiming with FOR UPDATE SKIP LOCKED
   const content = fs.readFileSync(path.join(migrationsDir, '20261030000004_create_scheduler_and_job_queue.sql'), 'utf8');
   assert.ok(content.includes('claim_due_reminders'));
   assert.ok(content.includes('FOR UPDATE OF r SKIP LOCKED'));
+  assert.ok(content.includes('complete_reminder_occurrence'));
+});
+
+it('Migration 5 implements hourly recurrence, drift prevention, and end conditions', () => {
+  const content = fs.readFileSync(path.join(migrationsDir, '20261030000005_add_hourly_recurrence.sql'), 'utf8');
+  assert.ok(content.includes('hourly'));
+  assert.ok(content.includes('recurrence_interval_hours'));
+  assert.ok(content.includes('recurrence_end_at'));
+  assert.ok(content.includes('max_occurrences'));
+  assert.ok(content.includes('occurrences_count'));
+  assert.ok(content.includes('claim_due_reminders'));
   assert.ok(content.includes('complete_reminder_occurrence'));
 });
 

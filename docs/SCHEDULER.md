@@ -62,6 +62,16 @@ Our design implements the safest industry standard:
 3. **Bounded retries**: Failed attempts are retried up to 3 times with exponential backoff (5-minute retry intervals).
 4. **Visibility**: Failed attempts remain visible in the database logs and dashboard rather than being silently dropped.
 
+### 2.4 Drift-Free Hourly Recurrence Engine
+When hourly recurrence is selected (1h, 2h, 3h, 4h, or custom interval):
+- The next occurrence is calculated strictly from the original `scheduled_at` timestamp:
+  $$\text{next\_run\_at} = \text{scheduled\_at} + k \times (\text{interval\_hours} \times 1\text{ hour})$$
+- This guarantees zero timing drift: even if server load or cron delay causes a run to process 45 seconds later, the subsequent occurrence stays pinned to the exact original minute and second.
+- **End Conditions**:
+  - `max_occurrences`: If specified, occurrences are tracked in `occurrences_count`. Once the limit is reached, `calculate_next_occurrence` returns `NULL` and `complete_reminder_occurrence` marks the reminder as `status = 'completed'`.
+  - `recurrence_end_at`: If specified and the calculated next run timestamp exceeds this date/time, recurrence ceases and the reminder completes.
+  - If neither condition is set, the reminder continues indefinitely until manually paused, completed, or deleted.
+
 ---
 
 ## 3. Configuring Supabase Cron (`pg_cron`)

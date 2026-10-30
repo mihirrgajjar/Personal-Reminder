@@ -51,10 +51,12 @@ A private, single-user personal reminder web application designed to deliver aut
 - **Reliable Server-Side Automation**: Backend scheduler checks for due reminders every minute and dispatches emails even when devices are powered off.
 - **Advanced Recurrence Engine**:
   - One-time reminders (`none`).
+  - **Hourly recurrence (`hourly`)**: Every 1 hour, 2 hours, 3 hours, 4 hours, or custom hourly interval with zero timing drift.
   - Daily recurrence (`daily`).
   - Weekly recurrence on selected weekdays (`0=Sun` ... `6=Sat`).
   - Monthly recurrence on a designated day (automatically clamping short months like Feb 28/29, Apr 30).
   - Wall-clock time preserved across Daylight Saving Time (DST) shifts.
+  - **Flexible End Conditions**: Optional end date/time and optional maximum repetition count (continues indefinitely if not set until manually paused, completed, or deleted).
 - **Concurrency & Idempotency Safeguards**:
   - Row claiming with `SELECT ... FOR UPDATE SKIP LOCKED` eliminates race conditions.
   - Unique idempotency constraint `(reminder_id, scheduled_for)` guarantees duplicate emails cannot be sent.

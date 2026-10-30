@@ -164,7 +164,8 @@ serve(async (req: Request) => {
         scheduled_for,
         destination_email,
         timezone,
-        recurrence_type
+        recurrence_type,
+        recurrence_interval_hours
       } = reminder;
 
       console.log(`[Sending] Reminder ${reminder_id}: "${title}" to ${maskEmail(destination_email)}`);
@@ -172,6 +173,14 @@ serve(async (req: Request) => {
       let deliverySuccess = false;
       let providerMessageId: string | null = null;
       let errorMessage: string | null = null;
+
+      let recurrenceLabel: string | null = null;
+      if (recurrence_type === "hourly") {
+        const h = recurrence_interval_hours || 1;
+        recurrenceLabel = h === 1 ? "Repeats Every Hour" : `Repeats Every ${h} Hours`;
+      } else if (recurrence_type && recurrence_type !== "none") {
+        recurrenceLabel = `Repeats ${recurrence_type}`;
+      }
 
       if (DRY_RUN) {
         // --- DRY-RUN SIMULATION ---
@@ -193,7 +202,7 @@ serve(async (req: Request) => {
               description: description || "",
               scheduledAtFormatted: formattedDate,
               timezone: tz,
-              recurrenceLabel: recurrence_type !== "none" ? `Repeats ${recurrence_type}` : null
+              recurrenceLabel: recurrenceLabel
             }),
             text: `${title}\n\n${description || ""}\n\nScheduled: ${formattedDate} (${tz})\nPersonal Reminder`,
             headers: {
