@@ -1,0 +1,30 @@
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.local
+supabase/.temp/
+.supabase/
+
+# Frontend actual config (keep config.example.js committed)
+assets/js/config.js
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# Logs & temp files
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Node / dependencies (if any tools are used in build/test)
+node_modules/
+dist/
+build/

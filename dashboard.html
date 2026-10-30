@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Personal Reminder</title>
+  <meta name="description" content="Manage your personal reminders and notifications.">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Main Navigation Header -->
+    <header class="site-header">
+      <div class="header-inner">
+        <a href="dashboard.html" class="brand" aria-label="Personal Reminder Home">
+          <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span>Personal Reminder</span>
+        </a>
+
+        <nav class="nav-links">
+          <button type="button" id="tab-btn-reminders" class="nav-item active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>Reminders</span>
+          </button>
+          
+          <button type="button" id="tab-btn-settings" class="nav-item">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>Settings</span>
+          </button>
+
+          <a href="login.html" id="btn-logout" class="nav-item" title="Sign Out">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Sign Out</span>
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Demo Notice Banner -->
+      <div class="demo-banner">
+        <span class="banner-badge">Demo Mode</span>
+        <span>
+          <strong>Phase 1 Frontend Foundation:</strong> Interacting with realistic demo data. Backend scheduler & Supabase sync will be integrated in subsequent phases.
+        </span>
+      </div>
+
+      <!-- Live Alerts / Toast Notifications -->
+      <div id="toast-alert" class="alert hidden" role="status">
+        <svg id="toast-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+        <span id="toast-message"></span>
+      </div>
+
+      <!-- VIEW 1: REMINDERS DASHBOARD -->
+      <div id="view-reminders">
+        <!-- Dashboard Page Header -->
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Personal Reminders</h1>
+            <p class="page-subtitle">
+              Timezone: <span id="current-tz-label" class="font-mono">Asia/Kolkata</span> &bull; 
+              <span id="current-clock-label"></span>
+            </p>
+          </div>
+          <div class="header-actions">
+            <button type="button" id="btn-open-create" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>New Reminder</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary Statistics Grid -->
+        <section class="summary-grid" aria-label="Reminder statistics">
+          <div class="summary-card" data-filter="today" tabindex="0" role="button" aria-label="View Today reminders">
+            <div class="summary-card-header">
+              <span class="summary-title">Today</span>
+              <svg class="summary-icon today" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <div class="summary-count" id="count-today">0</div>
+          </div>
+
+          <div class="summary-card" data-filter="upcoming" tabindex="0" role="button" aria-label="View Upcoming reminders">
+            <div class="summary-card-header">
+              <span class="summary-title">Upcoming</span>
+              <svg class="summary-icon upcoming" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <div class="summary-count" id="count-upcoming">0</div>
+          </div>
+
+          <div class="summary-card" data-filter="overdue" tabindex="0" role="button" aria-label="View Overdue reminders">
+            <div class="summary-card-header">
+              <span class="summary-title">Overdue</span>
+              <svg class="summary-icon overdue" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <div class="summary-count" id="count-overdue">0</div>
+          </div>
+
+          <div class="summary-card" data-filter="completed" tabindex="0" role="button" aria-label="View Completed reminders">
+            <div class="summary-card-header">
+              <span class="summary-title">Completed</span>
+              <svg class="summary-icon completed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <div class="summary-count" id="count-completed">0</div>
+          </div>
+        </section>
+
+        <!-- Controls / Filter Tabs -->
+        <div class="controls-bar">
+          <div class="filter-tabs" role="tablist" aria-label="Filter reminders by status">
+            <button type="button" class="filter-tab active" data-filter="all">All</button>
+            <button type="button" class="filter-tab" data-filter="today">Today</button>
+            <button type="button" class="filter-tab" data-filter="upcoming">Upcoming</button>
+            <button type="button" class="filter-tab" data-filter="overdue">Overdue</button>
+            <button type="button" class="filter-tab" data-filter="completed">Completed</button>
+            <button type="button" class="filter-tab" data-filter="recurring">Recurring</button>
+          </div>
+
+          <div style="font-size: 0.85rem; color: var(--text-muted);">
+            Showing <strong id="filter-display-count">0</strong> reminders
+          </div>
+        </div>
+
+        <!-- Reminders List -->
+        <div id="reminders-container" class="reminders-list" aria-live="polite">
+          <!-- Dynamically populated by JS -->
+        </div>
+
+        <!-- Empty State Container (Hidden when items exist) -->
+        <div id="empty-state" class="empty-state hidden">
+          <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <h2 class="empty-state-title">No reminders found</h2>
+          <p class="empty-state-desc" id="empty-state-desc">You don't have any reminders matching the current filter. Create a new one to get started.</p>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-empty-create">
+            + Create New Reminder
+          </button>
+        </div>
+
+        <!-- Loading State Container -->
+        <div id="loading-state" class="loading-state hidden">
+          <div class="spinner"></div>
+          <span>Loading reminders...</span>
+        </div>
+      </div>
+
+      <!-- VIEW 2: SETTINGS SECTION -->
+      <div id="view-settings" class="hidden">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Preferences & Settings</h1>
+            <p class="page-subtitle">Configure your destination email address and preferred timezone.</p>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h2 class="settings-section-title">Notification Destination</h2>
+          <p class="settings-section-desc">Email address where reminder notifications will be sent by the backend.</p>
+
+          <form id="settings-form" novalidate>
+            <div class="form-group" style="max-width: 440px; margin-bottom: 1.25rem;">
+              <label class="form-label" for="setting-email">Destination Gmail Address <span class="required">*</span></label>
+              <input type="email" id="setting-email" class="form-input" value="owner@gmail.com" required>
+              <span class="form-hint">Notifications will be sent via Resend to this inbox.</span>
+            </div>
+
+            <div class="form-group" style="max-width: 440px; margin-bottom: 1.75rem;">
+              <label class="form-label" for="setting-timezone">Default Timezone <span class="required">*</span></label>
+              <select id="setting-timezone" class="form-select">
+                <option value="Asia/Kolkata" selected>Asia/Kolkata (IST, UTC+5:30)</option>
+                <option value="UTC">UTC (Universal Coordinated Time)</option>
+                <option value="America/New_York">America/New_York (EST/EDT)</option>
+                <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                <option value="Europe/London">Europe/London (GMT/BST)</option>
+                <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
+                <option value="Asia/Dubai">Asia/Dubai (GST, UTC+4)</option>
+                <option value="Asia/Singapore">Asia/Singapore (SGT, UTC+8)</option>
+                <option value="Asia/Tokyo">Asia/Tokyo (JST, UTC+9)</option>
+                <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+              </select>
+              <span class="form-hint">All dates and times are evaluated and rendered in this timezone.</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              <span>Save Preferences</span>
+            </button>
+          </form>
+        </div>
+
+        <div class="settings-section">
+          <h2 class="settings-section-title">Backend & Delivery Information</h2>
+          <p class="settings-section-desc">Current system configuration overview.</p>
+          <div style="font-size: 0.85rem; line-height: 1.8; color: var(--text-muted);">
+            <div><strong>Architecture:</strong> Netlify (Frontend) &bull; Supabase (Auth, Postgres, pg_cron) &bull; Resend (SMTP API)</div>
+            <div><strong>Scheduler Frequency:</strong> ~1 run per minute via pg_cron</div>
+            <div><strong>Duplicate Protection:</strong> DB row claiming & idempotency key per scheduled run</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div style="max-width: var(--max-width); margin: 0 auto;">
+        Personal Reminder &bull; Private Owner Instance &bull; Built with Supabase & Resend
+      </div>
+    </footer>
+  </div>
+
+  <!-- MODAL: ADD / EDIT REMINDER -->
+  <div id="reminder-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-headline">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-headline">New Reminder</h2>
+        <button type="button" class="btn-icon" id="btn-close-modal" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <form id="reminder-form" novalidate>
+        <div class="modal-body">
+          <input type="hidden" id="reminder-id">
+
+          <!-- Title -->
+          <div class="form-group">
+            <label class="form-label" for="form-title">Reminder Title <span class="required">*</span></label>
+            <input type="text" id="form-title" class="form-input" placeholder="e.g. Server backup check" required>
+            <div class="form-error-msg hidden" id="title-error"></div>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label class="form-label" for="form-desc">Description (Optional)</label>
+            <textarea id="form-desc" class="form-textarea" rows="2" placeholder="Add additional context or notes..."></textarea>
+          </div>
+
+          <!-- Date & Time Row -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="form-date">Date <span class="required">*</span></label>
+              <input type="date" id="form-date" class="form-input" required>
+              <div class="form-error-msg hidden" id="date-error"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="form-time">Time <span class="required">*</span></label>
+              <input type="time" id="form-time" class="form-input" required>
+              <div class="form-error-msg hidden" id="time-error"></div>
+            </div>
+          </div>
+
+          <!-- Recurrence Type -->
+          <div class="form-group">
+            <label class="form-label" for="form-recurrence">Recurrence Rule</label>
+            <select id="form-recurrence" class="form-select">
+              <option value="none">One-time (No recurrence)</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly (Select weekdays)</option>
+              <option value="monthly">Monthly (Selected day)</option>
+            </select>
+          </div>
+
+          <!-- Weekly Days Selector (conditionally visible) -->
+          <div id="weekly-days-group" class="form-group hidden">
+            <label class="form-label">Repeat on weekdays <span class="required">*</span></label>
+            <div class="weekday-selector">
+              <button type="button" class="weekday-btn" data-day="1">Mon</button>
+              <button type="button" class="weekday-btn" data-day="2">Tue</button>
+              <button type="button" class="weekday-btn" data-day="3">Wed</button>
+              <button type="button" class="weekday-btn" data-day="4">Thu</button>
+              <button type="button" class="weekday-btn" data-day="5">Fri</button>
+              <button type="button" class="weekday-btn" data-day="6">Sat</button>
+              <button type="button" class="weekday-btn" data-day="0">Sun</button>
+            </div>
+            <div class="form-error-msg hidden" id="weekday-error">Please select at least one weekday.</div>
+          </div>
+
+          <!-- Monthly Day Selector (conditionally visible) -->
+          <div id="monthly-day-group" class="form-group hidden">
+            <label class="form-label" for="form-month-day">Day of Month <span class="required">*</span></label>
+            <input type="number" id="form-month-day" class="form-input" min="1" max="31" value="1">
+            <span class="form-hint">Note: If a month has fewer days (e.g. Feb 30), the last valid day of that month will be used.</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-reminder">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <span>Save Reminder</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SNOOZE REMINDER -->
+  <div id="snooze-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="snooze-headline">
+    <div class="modal-card" style="max-width: 420px;">
+      <div class="modal-header">
+        <h2 class="modal-title" id="snooze-headline">Snooze Reminder</h2>
+        <button type="button" class="btn-icon" id="btn-close-snooze" aria-label="Close modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: var(--text-muted);" id="snooze-reminder-title-label"></p>
+        <p style="font-size: 0.85rem; font-weight: 500;">Select how long to postpone this reminder:</p>
+        <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+          <button type="button" class="btn btn-secondary snooze-option" data-minutes="60" style="justify-content: flex-start;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>+1 Hour</span>
+          </button>
+          <button type="button" class="btn btn-secondary snooze-option" data-minutes="180" style="justify-content: flex-start;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>+3 Hours</span>
+          </button>
+          <button type="button" class="btn btn-secondary snooze-option" data-minutes="1440" style="justify-content: flex-start;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Tomorrow (+1 Day)</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-snooze">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/js/config.example.js"></script>
+  <script src="assets/js/reminders.js"></script>
+  <script src="assets/js/dashboard.js"></script>
+</body>
+</html>

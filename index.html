@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Reminder</title>
+  <meta name="description" content="Personal Reminder website.">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script>
+    // In Phase 1 frontend demo, automatically forward to the dashboard
+    // In Phase 2, this will check Supabase session state and route accordingly
+    window.location.replace("dashboard.html");
+  </script>
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card" style="text-align: center;">
+      <h1 class="auth-title">Personal Reminder</h1>
+      <p class="auth-subtitle" style="margin-top: 0.5rem;">Redirecting to your dashboard...</p>
+      <div style="margin-top: 1.5rem;">
+        <a href="dashboard.html" class="btn btn-primary" style="margin-bottom: 0.5rem; width: 100%;">Go to Dashboard</a>
+        <a href="login.html" class="btn btn-secondary" style="width: 100%;">Go to Login</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
