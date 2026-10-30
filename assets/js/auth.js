@@ -1,8 +1,8 @@
 /**
- * Personal Reminder - Authentication Handler (Phase 1 Foundation)
+ * Personal Reminder - Authentication Handler
  * 
- * Provides client-side validation and interactive feedback for the login & reset flows.
- * Supabase Auth client integration is implemented in Phase 2.
+ * Supports Supabase Auth (Sign In, Password Reset, Password Update)
+ * with graceful fallback to demo mode when credentials are unconfigured.
  */
 
 (function () {
@@ -11,11 +11,13 @@
   // DOM Elements
   const loginForm = document.getElementById('login-form');
   const resetForm = document.getElementById('reset-form');
+  const updatePasswordForm = document.getElementById('update-password-form');
   const authTitle = document.getElementById('auth-title');
   const authSubtitle = document.getElementById('auth-subtitle');
   const authAlert = document.getElementById('auth-alert');
   const alertIcon = document.getElementById('alert-icon');
   const alertMessage = document.getElementById('alert-message');
+  const authConfigNotice = document.getElementById('auth-config-notice');
 
   const btnToggleReset = document.getElementById('btn-toggle-reset');
   const btnCancelReset = document.getElementById('btn-cancel-reset');
@@ -33,6 +35,12 @@
   const resetSpinner = document.getElementById('reset-spinner');
   const resetBtnText = document.getElementById('reset-btn-text');
   const btnResetSubmit = document.getElementById('btn-reset-submit');
+
+  const newPassword = document.getElementById('new-password');
+  const newPasswordError = document.getElementById('new-password-error');
+  const updatePasswordSpinner = document.getElementById('update-password-spinner');
+  const updatePasswordBtnText = document.getElementById('update-password-btn-text');
+  const btnUpdatePasswordSubmit = document.getElementById('btn-update-password-submit');
 
   // Helper: Show Alert
   function showAlert(message, type = 'error') {
@@ -52,9 +60,46 @@
     if (authAlert) authAlert.classList.add('hidden');
   }
 
-  // Helper: Email Validation
   function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  // Check if Supabase credentials are configured
+  const isConfigured = window.SupabaseModule && window.SupabaseModule.isConfigured();
+  if (!isConfigured && authConfigNotice) {
+    authConfigNotice.classList.remove('hidden');
+  }
+
+  // Check URL hash / params for password recovery link
+  async function checkRecoveryMode() {
+    const hash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    const isRecovery = urlParams.get('type') === 'recovery' || hash.includes('type=recovery');
+
+    if (isRecovery) {
+      if (loginForm) loginForm.classList.add('hidden');
+      if (resetForm) resetForm.classList.add('hidden');
+      if (updatePasswordForm) updatePasswordForm.classList.remove('hidden');
+      authTitle.textContent = 'Set New Password';
+      authSubtitle.textContent = 'Enter your new owner password below.';
+    }
+  }
+
+  // Check if user is already logged in
+  async function checkExistingSession() {
+    if (isConfigured) {
+      try {
+        const session = await window.SupabaseModule.getSession();
+        if (session && session.user) {
+          // If already authenticated and not resetting password, forward to dashboard
+          if (!window.location.hash.includes('type=recovery')) {
+            window.location.replace('dashboard.html');
+          }
+        }
+      } catch (e) {
+        console.warn('Session verification notice:', e.message);
+      }
+    }
   }
 
   // Switch to Reset Form
@@ -83,7 +128,7 @@
 
   // Handle Login Submit
   if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       hideAlert();
 
@@ -91,7 +136,6 @@
       const email = loginEmail.value.trim();
       const password = loginPassword.value;
 
-      // Validate email
       if (!email) {
         loginEmail.classList.add('error');
         loginEmailError.textContent = 'Email address is required.';
@@ -107,7 +151,6 @@
         loginEmailError.classList.add('hidden');
       }
 
-      // Validate password
       if (!password) {
         loginPassword.classList.add('error');
         loginPasswordError.textContent = 'Password is required.';
@@ -120,29 +163,51 @@
 
       if (hasError) return;
 
-      // Show loading state
       btnLoginSubmit.disabled = true;
       loginSpinner.classList.remove('hidden');
-      loginBtnText.textContent = 'Verifying...';
+      loginBtnText.textContent = 'Signing in...';
 
-      // Phase 1 Demo simulation (In Phase 2, Supabase signInWithPassword will be used)
-      setTimeout(() => {
-        btnLoginSubmit.disabled = false;
-        loginSpinner.classList.add('hidden');
-        loginBtnText.textContent = 'Sign In';
+      if (isConfigured) {
+        try {
+          await window.SupabaseModule.signIn(email, password);
+          showAlert('Sign-in successful. Loading dashboard...', 'success');
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 500);
+        } catch (err) {
+          btnLoginSubmit.disabled = false;
+          loginSpinner.classList.add('hidden');
+          loginBtnText.textContent = 'Sign In';
 
-        // Check demo credentials or accept owner demo login
-        showAlert('Demo sign-in verified. Redirecting to dashboard...', 'success');
+          let friendlyMessage = err.message || 'Authentication failed.';
+          if (friendlyMessage.includes('Invalid login credentials')) {
+            friendlyMessage = 'Invalid email or password. Please check your credentials.';
+          } else if (friendlyMessage.includes('Email not confirmed')) {
+            friendlyMessage = 'Email address has not been confirmed in Supabase Auth.';
+          } else if (friendlyMessage.includes('Failed to fetch')) {
+            friendlyMessage = 'Network error: Unable to connect to Supabase. Check your internet connection or Supabase URL.';
+          }
+          showAlert(friendlyMessage, 'error');
+        }
+      } else {
+        // Fallback for local demo simulation when config.js has not been filled
         setTimeout(() => {
-          window.location.href = 'dashboard.html';
+          btnLoginSubmit.disabled = false;
+          loginSpinner.classList.add('hidden');
+          loginBtnText.textContent = 'Sign In';
+
+          showAlert('Demo sign-in accepted (Supabase unconfigured). Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 500);
         }, 600);
-      }, 700);
+      }
     });
   }
 
-  // Handle Password Reset Submit
+  // Handle Password Reset Request
   if (resetForm) {
-    resetForm.addEventListener('submit', (e) => {
+    resetForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       hideAlert();
 
@@ -161,14 +226,72 @@
       resetSpinner.classList.remove('hidden');
       resetBtnText.textContent = 'Sending...';
 
-      // Phase 1 Demo simulation (In Phase 2, Supabase resetPasswordForEmail will be used)
-      setTimeout(() => {
-        btnResetSubmit.disabled = false;
-        resetSpinner.classList.add('hidden');
-        resetBtnText.textContent = 'Send Reset Link';
-
-        showAlert(`A reset link simulation has been sent to ${email}.`, 'success');
-      }, 800);
+      if (isConfigured) {
+        try {
+          await window.SupabaseModule.resetPassword(email);
+          btnResetSubmit.disabled = false;
+          resetSpinner.classList.add('hidden');
+          resetBtnText.textContent = 'Send Reset Link';
+          showAlert(`Password recovery email sent to ${email}. Please check your inbox.`, 'success');
+        } catch (err) {
+          btnResetSubmit.disabled = false;
+          resetSpinner.classList.add('hidden');
+          resetBtnText.textContent = 'Send Reset Link';
+          showAlert(err.message || 'Unable to send password recovery email.', 'error');
+        }
+      } else {
+        setTimeout(() => {
+          btnResetSubmit.disabled = false;
+          resetSpinner.classList.add('hidden');
+          resetBtnText.textContent = 'Send Reset Link';
+          showAlert(`(Demo Mode) Password recovery email simulated for ${email}.`, 'success');
+        }, 600);
+      }
     });
   }
+
+  // Handle Update Password Submit (Recovery flow)
+  if (updatePasswordForm) {
+    updatePasswordForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const pwd = newPassword.value;
+      if (!pwd || pwd.length < 6) {
+        newPassword.classList.add('error');
+        newPasswordError.textContent = 'Password must be at least 6 characters.';
+        newPasswordError.classList.remove('hidden');
+        return;
+      }
+
+      newPassword.classList.remove('error');
+      newPasswordError.classList.add('hidden');
+
+      btnUpdatePasswordSubmit.disabled = true;
+      updatePasswordSpinner.classList.remove('hidden');
+      updatePasswordBtnText.textContent = 'Updating...';
+
+      try {
+        const sb = window.SupabaseModule.getClient();
+        if (!sb) throw new Error('Supabase client unavailable.');
+
+        const { error } = await sb.auth.updateUser({ password: pwd });
+        if (error) throw error;
+
+        showAlert('Password successfully updated! Redirecting to dashboard...', 'success');
+        setTimeout(() => {
+          window.location.href = 'dashboard.html';
+        }, 1200);
+      } catch (err) {
+        btnUpdatePasswordSubmit.disabled = false;
+        updatePasswordSpinner.classList.add('hidden');
+        updatePasswordBtnText.textContent = 'Update Password';
+        showAlert(err.message || 'Unable to update password.', 'error');
+      }
+    });
+  }
+
+  // Initialize
+  checkRecoveryMode();
+  checkExistingSession();
 })();

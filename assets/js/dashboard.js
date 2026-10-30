@@ -1,20 +1,32 @@
 /**
- * Personal Reminder - Dashboard Controller (Phase 1 Foundation)
+ * Personal Reminder - Dashboard Controller
  * 
- * Manages UI interactions, modals, list filtering, and summary metrics.
+ * Manages UI interactions, modals, list filtering, summary metrics,
+ * Supabase route protection, and profile synchronization.
  */
 
-(function () {
+(async function () {
   'use strict';
 
   // State
   let currentFilter = 'all';
   let activeSnoozeId = null;
   let activeTimezone = 'Asia/Kolkata';
+  let currentUser = null;
+  let isLiveAuth = false;
+
+  // Route Protection & Session Initialization
+  if (window.SupabaseModule) {
+    const authResult = await window.SupabaseModule.requireAuth();
+    if (!authResult) return; // redirected
+    currentUser = authResult.user;
+    isLiveAuth = !authResult.isDemo;
+  }
 
   // DOM Elements - Navigation & Views
   const tabBtnReminders = document.getElementById('tab-btn-reminders');
   const tabBtnSettings = document.getElementById('tab-btn-settings');
+  const btnLogout = document.getElementById('btn-logout');
   const viewReminders = document.getElementById('view-reminders');
   const viewSettings = document.getElementById('view-settings');
   const currentTzLabel = document.getElementById('current-tz-label');
@@ -74,6 +86,42 @@
   const settingsForm = document.getElementById('settings-form');
   const settingEmail = document.getElementById('setting-email');
   const settingTimezone = document.getElementById('setting-timezone');
+
+  // --- Sign Out Handler ---
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (isLiveAuth && window.SupabaseModule) {
+        await window.SupabaseModule.signOut();
+      } else {
+        window.location.href = 'login.html';
+      }
+    });
+  }
+
+  // --- Profile Loading ---
+  async function loadUserProfile() {
+    if (isLiveAuth && currentUser && currentUser.id) {
+      try {
+        const profile = await window.SupabaseModule.getProfile(currentUser.id);
+        if (profile) {
+          if (profile.destination_email && settingEmail) {
+            settingEmail.value = profile.destination_email;
+          }
+          if (profile.timezone && settingTimezone) {
+            settingTimezone.value = profile.timezone;
+            activeTimezone = profile.timezone;
+            if (currentTzLabel) currentTzLabel.textContent = profile.timezone;
+            updateClock();
+          }
+        } else if (currentUser.email && settingEmail) {
+          settingEmail.value = currentUser.email;
+        }
+      } catch (e) {
+        console.warn('Could not load profile from Supabase:', e.message);
+      }
+    }
+  }
 
   // --- Toast Alerts ---
   let toastTimer = null;
@@ -182,9 +230,7 @@
     weekdayButtons.forEach(b => b.classList.remove('selected'));
     updateRecurrenceInputs();
 
-    // Clear errors
     clearFormErrors();
-
     reminderModal.classList.add('open');
     formTitle.focus();
   }
@@ -243,7 +289,6 @@
   if (btnCloseModal) btnCloseModal.addEventListener('click', closeModal);
   if (btnCancelModal) btnCancelModal.addEventListener('click', closeModal);
 
-  // Close modal when clicking outside modal-card
   reminderModal.addEventListener('click', (e) => {
     if (e.target === reminderModal) closeModal();
   });
@@ -422,7 +467,6 @@
       card.className = `reminder-card ${isCompleted ? 'completed' : ''}`;
       card.setAttribute('data-id', item.id);
 
-      // Status Badge
       let badgeHtml = '';
       if (isCompleted) {
         badgeHtml = '<span class="badge badge-completed">Completed</span>';
@@ -498,7 +542,6 @@
         </div>
       `;
 
-      // Event listeners for card buttons
       const checkBtn = card.querySelector('.reminder-check-btn');
       checkBtn.addEventListener('click', () => {
         window.ReminderStore.toggleComplete(item.id);
@@ -554,7 +597,6 @@
       tab.classList.add('active');
       currentFilter = tab.dataset.filter;
       
-      // Update summary cards active state
       summaryCards.forEach(c => {
         if (c.dataset.filter === currentFilter) {
           c.classList.add('active');
@@ -567,7 +609,6 @@
     });
   });
 
-  // Summary Cards Click Handlers
   summaryCards.forEach(card => {
     card.addEventListener('click', () => {
       const filter = card.dataset.filter;
@@ -587,7 +628,7 @@
 
   // --- Settings Form Submit ---
   if (settingsForm) {
-    settingsForm.addEventListener('submit', (e) => {
+    settingsForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = settingEmail.value.trim();
       const tz = settingTimezone.value;
@@ -601,7 +642,20 @@
       if (currentTzLabel) currentTzLabel.textContent = tz;
       updateClock();
 
-      showToast(`Preferences saved. Timezone updated to ${tz}.`, 'success');
+      if (isLiveAuth && currentUser && currentUser.id) {
+        try {
+          await window.SupabaseModule.updateProfile(currentUser.id, {
+            destination_email: email,
+            timezone: tz
+          });
+          showToast(`Preferences saved to your Supabase profile. Timezone updated to ${tz}.`, 'success');
+        } catch (err) {
+          showToast(`Error updating profile: ${err.message}`, 'error');
+        }
+      } else {
+        showToast(`Preferences saved locally. Timezone updated to ${tz}.`, 'success');
+      }
+
       setTimeout(() => {
         switchView('reminders');
         renderDashboard();
@@ -610,5 +664,6 @@
   }
 
   // Initial Boot
+  await loadUserProfile();
   renderDashboard();
 })();

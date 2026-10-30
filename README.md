@@ -64,7 +64,7 @@ Navigate to: `http://localhost:8080`
 ## Development Roadmap
 
 - [x] **Phase 1**: Project setup, Git repository connection, and responsive frontend foundation.
-- [ ] **Phase 2**: Supabase setup & private owner authentication.
+- [x] **Phase 2**: Supabase setup & private owner authentication.
 - [ ] **Phase 3**: Reminder database schema, RLS policies, and live CRUD.
 - [ ] **Phase 4**: Server-side recurrence engine.
 - [ ] **Phase 5**: Server-side scheduler & concurrency-safe job processing.
