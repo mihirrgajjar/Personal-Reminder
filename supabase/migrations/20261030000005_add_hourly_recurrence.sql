@@ -17,6 +17,8 @@ ALTER TABLE public.reminders
   ADD COLUMN IF NOT EXISTS occurrences_count INTEGER NOT NULL DEFAULT 0;
 
 -- 2. Update calculate_next_occurrence function to support hourly intervals & end conditions
+DROP FUNCTION IF EXISTS public.calculate_next_occurrence(TIMESTAMPTZ, TEXT, TEXT, INTEGER[], INTEGER);
+DROP FUNCTION IF EXISTS public.calculate_next_occurrence(TIMESTAMPTZ, TEXT, TEXT, INTEGER[], INTEGER, INTEGER, TIMESTAMPTZ, INTEGER, INTEGER);
 CREATE OR REPLACE FUNCTION public.calculate_next_occurrence(
   p_current_scheduled TIMESTAMPTZ,
   p_timezone TEXT,
@@ -185,6 +187,8 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
 -- 3. Update claim_due_reminders to include hourly interval & end conditions
+DROP FUNCTION IF EXISTS public.claim_due_reminders(INTEGER);
+DROP FUNCTION IF EXISTS public.claim_due_reminders();
 CREATE OR REPLACE FUNCTION public.claim_due_reminders(
   p_batch_size INT DEFAULT 50
 )
@@ -274,6 +278,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 4. Update complete_reminder_occurrence to track occurrence counts and check termination
+DROP FUNCTION IF EXISTS public.complete_reminder_occurrence(UUID, TIMESTAMPTZ, TEXT, TEXT, TEXT);
 CREATE OR REPLACE FUNCTION public.complete_reminder_occurrence(
   p_reminder_id UUID,
   p_scheduled_for TIMESTAMPTZ,
