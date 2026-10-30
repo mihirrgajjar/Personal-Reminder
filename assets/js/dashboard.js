@@ -2,7 +2,7 @@
  * Personal Reminder - Dashboard Controller
  * 
  * Manages UI interactions, modals, list filtering, summary metrics,
- * Supabase route protection, and profile synchronization.
+ * Supabase route protection, database CRUD, and profile synchronization.
  */
 
 (async function () {
@@ -18,7 +18,7 @@
   // Route Protection & Session Initialization
   if (window.SupabaseModule) {
     const authResult = await window.SupabaseModule.requireAuth();
-    if (!authResult) return; // redirected
+    if (!authResult) return; // unauthenticated redirect occurred
     currentUser = authResult.user;
     isLiveAuth = !authResult.isDemo;
   }
@@ -58,6 +58,7 @@
   const btnEmptyCreate = document.getElementById('btn-empty-create');
   const btnCloseModal = document.getElementById('btn-close-modal');
   const btnCancelModal = document.getElementById('btn-cancel-modal');
+  const btnSaveReminder = document.getElementById('btn-save-reminder');
 
   const formId = document.getElementById('reminder-id');
   const formTitle = document.getElementById('form-title');
@@ -217,7 +218,7 @@
     formTitle.value = '';
     formDesc.value = '';
     
-    // Set default date & time to next hour
+    // Default to next hour
     const now = new Date();
     now.setHours(now.getHours() + 1, 0, 0, 0);
     formDate.value = now.toISOString().split('T')[0];
@@ -236,7 +237,7 @@
   }
 
   function openEditModal(id) {
-    const reminders = window.ReminderStore.getAll();
+    const reminders = window.ReminderStore.getCached();
     const item = reminders.find(r => r.id === id);
     if (!item) return;
 
@@ -312,18 +313,22 @@
   });
 
   snoozeOptions.forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       if (!activeSnoozeId) return;
       const minutes = parseInt(btn.dataset.minutes, 10);
-      window.ReminderStore.snooze(activeSnoozeId, minutes);
-      closeSnoozeModal();
-      renderDashboard();
-      showToast('Reminder snoozed successfully.');
+      try {
+        await window.ReminderStore.snooze(activeSnoozeId, minutes);
+        closeSnoozeModal();
+        renderDashboard();
+        showToast('Reminder snoozed successfully.');
+      } catch (err) {
+        showToast(`Failed to snooze: ${err.message}`, 'error');
+      }
     });
   });
 
   // --- Form Validation & Submission ---
-  reminderForm.addEventListener('submit', (e) => {
+  reminderForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearFormErrors();
 
@@ -386,10 +391,17 @@
       recurrence_month_day: recurrence === 'monthly' ? parseInt(formMonthDay.value, 10) : null
     };
 
-    window.ReminderStore.save(reminderPayload);
-    closeModal();
-    renderDashboard();
-    showToast(formId.value ? 'Reminder updated successfully.' : 'New reminder created successfully.');
+    btnSaveReminder.disabled = true;
+    try {
+      await window.ReminderStore.save(reminderPayload);
+      closeModal();
+      renderDashboard();
+      showToast(formId.value ? 'Reminder updated successfully.' : 'New reminder created successfully.');
+    } catch (err) {
+      showToast(`Error saving reminder: ${err.message}`, 'error');
+    } finally {
+      btnSaveReminder.disabled = false;
+    }
   });
 
   // --- Rendering UI ---
@@ -432,7 +444,7 @@
   }
 
   function renderRemindersList() {
-    const allReminders = window.ReminderStore.getAll();
+    const allReminders = window.ReminderStore.getCached();
     let filtered = allReminders;
 
     if (currentFilter === 'today') {
@@ -543,10 +555,14 @@
       `;
 
       const checkBtn = card.querySelector('.reminder-check-btn');
-      checkBtn.addEventListener('click', () => {
-        window.ReminderStore.toggleComplete(item.id);
-        renderDashboard();
-        showToast(isCompleted ? 'Reminder marked as active.' : 'Reminder completed.');
+      checkBtn.addEventListener('click', async () => {
+        try {
+          await window.ReminderStore.toggleComplete(item.id);
+          renderDashboard();
+          showToast(isCompleted ? 'Reminder marked as active.' : 'Reminder completed.');
+        } catch (err) {
+          showToast(`Action failed: ${err.message}`, 'error');
+        }
       });
 
       const snoozeBtn = card.querySelector('.btn-action-snooze');
@@ -562,11 +578,15 @@
       });
 
       const deleteBtn = card.querySelector('.btn-action-delete');
-      deleteBtn.addEventListener('click', () => {
+      deleteBtn.addEventListener('click', async () => {
         if (confirm(`Are you sure you want to delete "${item.title}"?`)) {
-          window.ReminderStore.remove(item.id);
-          renderDashboard();
-          showToast('Reminder deleted.');
+          try {
+            await window.ReminderStore.remove(item.id);
+            renderDashboard();
+            showToast('Reminder deleted.');
+          } catch (err) {
+            showToast(`Delete failed: ${err.message}`, 'error');
+          }
         }
       });
 
@@ -663,7 +683,16 @@
     });
   }
 
-  // Initial Boot
-  await loadUserProfile();
+  // Initial Boot: fetch profile and load reminders from database
+  if (loadingState) loadingState.classList.remove('hidden');
+  try {
+    await loadUserProfile();
+    await window.ReminderStore.fetchAll();
+  } catch (err) {
+    showToast(`Error loading data: ${err.message}`, 'error');
+  } finally {
+    if (loadingState) loadingState.classList.add('hidden');
+  }
+
   renderDashboard();
 })();

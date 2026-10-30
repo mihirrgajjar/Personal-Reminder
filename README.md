@@ -65,7 +65,7 @@ Navigate to: `http://localhost:8080`
 
 - [x] **Phase 1**: Project setup, Git repository connection, and responsive frontend foundation.
 - [x] **Phase 2**: Supabase setup & private owner authentication.
-- [ ] **Phase 3**: Reminder database schema, RLS policies, and live CRUD.
+- [x] **Phase 3**: Reminder database schema, RLS policies, and live CRUD.
 - [ ] **Phase 4**: Server-side recurrence engine.
 - [ ] **Phase 5**: Server-side scheduler & concurrency-safe job processing.
 - [ ] **Phase 6**: Resend email delivery integration.

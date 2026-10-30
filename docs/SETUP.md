@@ -20,7 +20,7 @@ Open your browser to: `http://localhost:8080`
 
 ---
 
-## 2. Supabase Project Setup (Phase 2)
+## 2. Supabase Project Setup (Phase 2 & Phase 3)
 
 ### Step 2.1: Create your Supabase Project
 1. Log in to [supabase.com](https://supabase.com) and click **"New Project"**.
@@ -47,15 +47,26 @@ Open your browser to: `http://localhost:8080`
 > [!IMPORTANT]
 > **NEVER** use or expose the `service_role` key in frontend code. Only the public `anon` key is safe for browser use.
 
-### Step 2.3: Apply the Database Migration
-1. In your Supabase Dashboard, open the **SQL Editor** from the left navigation.
-2. Click **"+ New Query"**.
-3. Open [supabase/migrations/20261030000001_create_profiles.sql](file:///d:/Projects/Personal_reminder/supabase/migrations/20261030000001_create_profiles.sql).
-4. Copy its contents, paste them into the SQL Editor, and click **"Run"**.
-5. This creates:
+### Step 2.3: Apply Database Migrations in Supabase SQL Editor
+
+#### Migration 1: Owner Profiles Table
+1. In Supabase Dashboard, open the **SQL Editor** from the left navigation and click **"+ New Query"**.
+2. Open [supabase/migrations/20261030000001_create_profiles.sql](file:///d:/Projects/Personal_reminder/supabase/migrations/20261030000001_create_profiles.sql).
+3. Paste its contents and click **"Run"**.
+4. This creates:
    - The `public.profiles` table with foreign key `auth.users(id)` and cascading deletes.
    - Row Level Security (RLS) policies ensuring only the authenticated user can read or modify their own record.
    - The automatic `on_auth_user_created` trigger that inserts a profile whenever a new user is created.
+
+#### Migration 2: Reminders & Reminder Logs (Phase 3)
+1. In the **SQL Editor**, click **"+ New Query"**.
+2. Open [supabase/migrations/20261030000002_create_reminders_and_logs.sql](file:///d:/Projects/Personal_reminder/supabase/migrations/20261030000002_create_reminders_and_logs.sql).
+3. Paste its contents and click **"Run"**.
+4. This creates:
+   - The `public.reminders` table (with title, description, scheduled_at timestamptz, timezone, recurrence settings, and next_run_at).
+   - The `public.reminder_logs` table with an idempotency constraint `UNIQUE (reminder_id, scheduled_for)` to guarantee duplicate email protection.
+   - Performance indexes on `(status, next_run_at)`, `user_id`, and `scheduled_at`.
+   - Strict Row Level Security (RLS) policies ensuring all reads, inserts, updates, and deletes are restricted to the owner (`auth.uid() = user_id`).
 
 ### Step 2.4: Create the Owner Account (Secure Single-User Procedure)
 Since this is a strictly private single-user application, public sign-ups must remain disabled.
@@ -85,3 +96,15 @@ To guarantee zero unauthorized registrations:
 4. Refresh the page: the session is seamlessly restored via Supabase Auth without logging out.
 5. In the dashboard header, click **Sign Out**: your session will be cleared and you will be returned to `login.html`.
 6. Try opening `dashboard.html` directly in an incognito window: the route guard automatically redirects unauthenticated requests back to `login.html`.
+
+---
+
+## 4. Testing Reminder CRUD & Database Operations
+
+With your owner account signed in:
+1. **Create Reminder**: Click **"+ New Reminder"**, enter title, date, time, and recurrence rule. Click **Save Reminder**. The record will be inserted directly into Supabase `public.reminders`.
+2. **Edit Reminder**: Click the edit pencil icon on any card, adjust the fields, and save.
+3. **Toggle Completion**: Click the circular checkmark button to mark a reminder complete or active.
+4. **Snooze**: Click **Snooze** to postpone by +1 hour, +3 hours, or until tomorrow morning.
+5. **Delete**: Click the trash icon to delete a reminder.
+6. **Data Persistence**: Sign out and log back in, or refresh the page; all reminders remain safely preserved in your Supabase database.
